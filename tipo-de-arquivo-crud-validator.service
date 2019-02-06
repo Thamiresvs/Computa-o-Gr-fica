@@ -1,0 +1,34 @@
+import { Injectable } from '@angular/core';
+import { AbstractControl, AsyncValidatorFn, ValidatorFn, ValidationErrors } from '@angular/forms';
+
+import { Observable } from 'rxjs/Observable';
+
+import { TipodeArquivoService } from '../../../../core/http-services/tipo-de-arquivo.service';
+import { TipodeArquivo } from '../../../../models/tipo-de-arquivo';
+import { SituacaoPesquisaConstants } from '../../../../models/constants/situacao-pesquisa.constants';
+
+@Injectable()
+export class TipodeArquivoCrudValidator {
+
+    constructor(private tipodeArquivoService: TipodeArquivoService) {
+
+    }
+
+    validaNome(tipo: TipodeArquivo): AsyncValidatorFn {
+
+        return (c: AbstractControl): Observable<ValidationErrors | null> => {
+
+            if (c.pristine && !c.value) {
+                return Observable.of(null);
+            }
+
+            return Observable.timer(200).switchMap(() => {
+                return this.tipodeArquivoService.existeTipodeArquivoComMesmoNome(tipo)
+                    .map((existe) => {
+                        return existe ? { nomeExistente: true } : null;
+                    })
+            });
+        }
+    }
+
+}

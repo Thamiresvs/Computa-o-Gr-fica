@@ -1,0 +1,161 @@
+import { Component, OnInit } from '@angular/core';
+import { FormControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute, Params, Router } from '@angular/router';
+
+
+import { Observable } from 'rxjs/Observable';
+import { ToastrService } from 'ngx-toastr';
+
+import { BlockUiService } from '../../../../core/block-ui/block-ui.service';
+import { BreadcrumbInfo } from '../../../../shared/breadcrumb/breadcrumb-info';
+import { CanComponentDeactivate } from '../../../../core/can-deactivate-guard.service';
+import { ConfirmationModalService } from '../../../../core/confirmation-modal/confirmation-modal.service';
+import { ExceptionService } from '../../../../core/exception.service';
+import { PermissaoModulosConstants } from '../../../../models/constants/permissao-modulos.constants';
+import { UserAuthenticationService } from '../../../../core/user-authentication-service';
+import { TipodeArquivo } from '../../../../models/tipo-de-arquivo';
+import { TipodeArquivoService } from '../../../../core/http-services/tipo-de-arquivo.service';
+import { TipodeArquivoCrudValidator } from './tipo-de-arquivo-crud-validator.service';
+
+@Component({
+    moduleId: module.id,
+    templateUrl: './tipo-de-arquivo-crud.component.html',
+    styleUrls: ['./tipo-de-arquivo-crud.component.scss']
+})
+export class TipodeArquivoCrudComponent implements OnInit, CanComponentDeactivate {
+
+    breadcrumbSteps: BreadcrumbInfo[];
+
+    isCreatingOrUpdating: boolean;
+
+    isDeleting: boolean;
+
+    savedSuccessfully: boolean;
+
+    tipodeArquivoForm: FormGroup;
+
+    tipodeArquivo: TipodeArquivo;
+
+    tipodeArquivoEditada: TipodeArquivo;
+
+    private initialSteps: BreadcrumbInfo[] = [
+        { nome: "Atualização", link: "/atualizacao" },
+        { nome: "Tabelas auxiliares", link: "/atualizacao/tabelas-auxiliares" },
+        { nome: "Tipo de arquivo", link: "/atualizacao/tabelas-auxiliares/tipo-de-arquivo" },
+    ];
+
+    constructor(private route: ActivatedRoute,
+        private fb: FormBuilder,
+        private confirmationModalService: ConfirmationModalService,
+        private toastrService: ToastrService,
+        private userAuthenticationService: UserAuthenticationService,
+        private blockUiService: BlockUiService,
+        private tipodeArquivoService: TipodeArquivoService,
+        private exceptionService: ExceptionService,
+        private router: Router,
+        private tipodeArquivoCrudValidator: TipodeArquivoCrudValidator) {
+
+    }
+
+    canDeactivate() {
+        return !this.isCreatingOrUpdating ||
+            this.savedSuccessfully ||
+            !this.userAuthenticationService.isLogged ||
+            this.confirmationModalService.activate("As alterações não salvas serão perdidas. Tem certeza que deseja sair?");
+    }
+
+    confirmaExclusao() {
+        this.confirmationModalService.activate("Todas as informações do tipo de arquivo serão excluídas definitivamente. Deseja prosseguir?").then((confirmou) => {
+            if (confirmou) {
+                this.excluir();
+            }
+        });
+    }
+
+    ngOnInit() {
+        this.route.data.subscribe((data: {
+            tipodeArquivo: TipodeArquivo
+        }) => {
+            this.tipodeArquivo = data.tipodeArquivo;
+            this.tipodeArquivoEditada = Object.assign({}, this.tipodeArquivo);
+
+            this.inicializaFormulario();
+
+            if (this.tipodeArquivo.Codigo > 0) {
+                this.breadcrumbSteps = this.initialSteps.concat([{ nome: this.tipodeArquivo.Nome }]);
+            }
+            else {
+                this.breadcrumbSteps = this.initialSteps.concat([{ nome: "Criar" }]);
+            }
+        });
+
+        this.route.queryParams.subscribe((queryParams: Params) => {
+            this.isCreatingOrUpdating = !queryParams["operacao"] || queryParams["operacao"] == PermissaoModulosConstants.Edicao;
+            this.isDeleting = queryParams["operacao"] && queryParams["operacao"] == PermissaoModulosConstants.Remocao;
+        });
+    }
+
+    submit() {
+        if (this.tipodeArquivoForm.valid) {
+            this.salvar();
+        }
+        else {
+            this.toastrService.error("Existem campos com preenchimento incorreto. Verifique os campos e tente novamente.");
+
+            Object.keys(this.tipodeArquivo.controls).forEach((control) => {
+                this.tipodeArquivoForm.get(control).markAsTouched();
+            });
+        }
+    }
+
+    private excluir() {
+        this.blockUiService.show();
+
+        this.tipodeArquivoService.excluir(this.tipodeArquivoEditada)
+            .catch((err) => {
+                this.exceptionService.catchErrorResponse(err);
+                return Observable.of(false);
+            })
+            .finally(() => {
+                this.blockUiService.hide();
+            })
+            .subscribe((sucesso: boolean) => {
+                this.savedSuccessfully = sucesso;
+
+                if (sucesso) {
+                    this.toastrService.success("Tipo de arquivo excluído com sucesso.");
+                    this.router.navigate(['/atualizacao/tabelas-auxiliares/tipo-de-arquivo']);
+                }
+            });
+    }
+
+    private inicializaFormulario() {
+        this.tipodeArquivoForm = this.fb.group({
+            nome: ['', [Validators.required, Validators.maxLength(80)], this.tipodeArquivoCrudValidator.validaNome(this.tipodeArquivoEditada)],
+            nomeIngles: ['', Validators.maxLength(80)],
+            nomeEspanhol: ['', Validators.maxLength(80)]
+        });
+    }
+
+    private salvar() {
+        this.blockUiService.show();
+
+        this.tipodeArquivoService.salvar(this.tipodeArquivoEditada)
+            .catch((err) => {
+                this.exceptionService.catchErrorResponse(err);
+                return Observable.of(false);
+            })
+            .finally(() => {
+                this.blockUiService.hide();
+            })
+            .subscribe((sucesso: boolean) => {
+                this.savedSuccessfully = sucesso;
+
+                if (sucesso) {
+                    this.toastrService.success("Tipo de arquivo salvo com sucesso.");
+                    this.router.navigate(['/atualizacao/tabelas-auxiliares/tipo-de-arquivo']);
+                }
+            });
+
+    }
+}

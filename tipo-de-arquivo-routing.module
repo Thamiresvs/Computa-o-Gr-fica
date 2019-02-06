@@ -1,0 +1,63 @@
+import { NgModule} from '@angular/core';
+import { RouterModule, Routes} from '@angular/router';
+
+
+import { CanDeactivateGuard } from '../../../core/can-deactivate-guard.service';
+import { TipodeArquivoComponent } from './tipo-de-arquivo.component';
+import { TipodeArquivoCrudComponent } from './crud/tipo-de-arquivo-crud.component';
+import { TipodeArquivoCrudGuard } from './crud/tipo-de-arquivo-crud-guard.service';
+import { TipodeArquivoCrudResolver } from './crud/tipo-de-arquivo-crud-resolver.service';
+import { TipodeArquivoCrudValidator } from './crud/tipo-de-arquivo-crud-validator.service';
+import { TipodeArquivoListComponent } from './list/tipo-de-arquivo-list.component';
+import { TipodeArquivoListResolver } from './list/tipo-de-arquivo-list-resolver.service';
+
+const routes: Routes = [
+    {
+        path: '',
+        component: TipodeArquivoComponent,
+        children: [
+            {
+                path: '',
+                pathMatch: 'full',
+                component: TipodeArquivoListComponent,
+                resolve: {
+                    tiposdeArquivo: TipodeArquivoListResolver
+                }
+            },
+            {
+                path: 'criar',
+                component: TipodeArquivoCrudComponent,
+                canActivate: [TipodeArquivoCrudGuard],
+                canDeactivate: [CanDeactivateGuard],
+                resolve: {
+                    tipodeArquivo: TipodeArquivoCrudResolver
+                }
+            },
+            {
+                path: ':codigo',
+                component: TipodeArquivoCrudComponent,
+                canActivate: [TipodeArquivoCrudGuard],
+                canDeactivate: [CanDeactivateGuard],
+                resolve: {
+                    tipodeArquivo: TipodeArquivoCrudResolver
+                }
+            }
+        ]
+    }
+];
+
+@NgModule({
+    imports: [RouterModule.forChild(routes)],
+    exports: [RouterModule],
+    providers: [TipodeArquivoListResolver,
+        TipodeArquivoCrudGuard,
+        TipodeArquivoCrudResolver,
+        TipodeArquivoCrudValidator]
+})
+export class TipodeArquivoRoutingModule {
+
+}
+
+export const routedComponents = [TipodeArquivoComponent,
+    TipodeArquivoListComponent,
+    TipodeArquivoCrudComponent];

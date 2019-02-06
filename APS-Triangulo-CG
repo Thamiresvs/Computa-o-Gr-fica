@@ -1,0 +1,332 @@
+#include <glut.h>
+#include <math.h>
+#include <stdio.h>
+
+int k = 1;
+//objeto em coordenadas homogêneas
+float A[3][3] = { 
+{ 0, 0, 1 },
+{ 5, 1, 1 },
+{ 5, 0, 1 }
+};
+
+
+float C[3][3] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+float Ti[3][3];
+float T[3][3];
+float R[3][3];
+float E[3][3];
+
+void eixo() {
+	glColor3f(0, 0, 0);
+	glBegin(GL_LINES);
+	//eixo x
+	glVertex2f(10, 0);
+	glVertex2f(-10, 0);
+	//eixo y
+	glVertex2f(0, -10);
+	glVertex2f(0, 10);
+	glEnd();
+}
+
+bool Validar_Valores(float x = 0, float y = 0) {
+	if (x < 10 && x > -10 && y < 10 && y > -10) {
+		return true;
+	}
+	return false;
+}
+
+//Produto entre Matrizes 3 x 3
+void Op(float Ob[3][3], float Tr[3][3]) {
+	int i, j, X;
+	float Aux = 0;
+
+	for (i = 0; i<3; i++) {
+		for (j = 0; j<3; j++) {
+			C[i][j] = 0;
+			for (X = 0; X<3; X++)
+			{
+				Aux += Ob[i][X] * Tr[X][j];
+			}
+			C[i][j] = Aux;
+			Aux = 0;
+		}
+	}
+
+}
+
+void Rotacao(float Ob[3][3], float R[3][3]) {
+	int i, j, X;
+	float Aux = 0;
+
+	for (i = 0; i<3; i++) {
+		for (j = 0; j<3; j++) {
+			C[i][j] = 0;
+			for (X = 0; X<3; X++)
+			{
+				Aux += Ob[i][X] * R[X][j];
+			}
+			C[i][j] = Aux;
+			Aux = 0;
+		}
+	}
+}
+
+void Escala(float Ob[3][3], float Tr[3][3], float Tri[3][3], float Es[3][3]) {
+	int i, j, X;
+	float Aux = 0;
+	float Re1[3][3], Re2[3][3];
+
+	for (i = 0; i<3; i++) {
+		for (j = 0; j<3; j++) {
+			Re1[i][j] = 0;
+			for (X = 0; X<3; X++)
+			{
+				Aux += Tri[i][X] * Es[X][j];
+			}
+			Re1[i][j] = Aux;
+			Aux = 0;
+		}
+	}
+
+	/*
+	 2  0  0 ok
+	 0  2  0
+	-2 -2  1
+	*/
+
+	for (i = 0; i<3; i++) {
+		for (j = 0; j<3; j++) {
+			Re2[i][j] = 0;
+			for (X = 0; X<3; X++)
+			{
+				Aux += Re1[i][X] * Tr[X][j];
+			}
+			Re2[i][j] = Aux;
+			Aux = 0;
+		}
+	}
+
+	/*
+	 2  0  0
+	 0  2  0
+	-1 -1  1
+	*/
+
+	for (i = 0; i<3; i++) {
+		for (j = 0; j<3; j++) {
+			C[i][j] = 0;
+			for (X = 0; X<3; X++)
+			{
+				Aux += Ob[i][X] * Re2[X][j];
+			}
+			C[i][j] = Aux;
+			Aux = 0;
+		}
+	}
+}
+
+void Objeto01() {
+	glColor3f(1, 0, 0);
+	glBegin(GL_TRIANGLES);
+	glVertex2f(A[0][0], A[0][1]);
+	glVertex2f(A[1][0], A[1][1]);
+	glVertex2f(A[2][0], A[2][1]);
+	glEnd();
+}
+
+// Translado
+void Objeto02() {
+	float dx, dy;
+	bool controlador = false;
+
+	while (controlador == false)
+	{
+		printf("\nInforme dx = ");
+		scanf_s("%f", &dx);
+		printf("\nInforme dy = ");
+		scanf_s("%f", &dy);
+
+		controlador = Validar_Valores(dx, dy);
+		if (!controlador) {
+			printf("\n Valores invalidos, x e y devem ter no maximo valor 10 e no minimo valor -10");
+		}
+	}
+
+	T[0][0] = 1; T[0][1] = 0; T[0][2] = 0;
+	T[1][0] = 0; T[1][1] = 1; T[1][2] = 0;
+	T[2][0] = dx; T[2][1] = dy; T[2][2] = 0;
+
+	Op(A, T);
+
+	glColor3f(0, 0, 1);
+	glBegin(GL_TRIANGLES);
+	glVertex2f(C[0][0], C[0][1]);
+	glVertex2f(C[1][0], C[1][1]);
+	glVertex2f(C[2][0], C[2][1]);
+	glEnd();
+}
+
+// ROTAÇÃO
+void Objeto03() {
+	float grau, seno, cosseno;
+	int sentido = 0;
+	bool controlador = false;
+
+	while (controlador == false)
+	{
+		printf("\n Sentido Horario = 0 & Anti-Horario = 1 = ");
+		scanf_s("%d", &sentido);
+		printf("\n Informe o grau = ");
+		scanf_s("%f", &grau);
+
+		controlador = Validar_Valores(0, 0);
+		if (!controlador) {
+			printf("\n Valores invalidos, x e y devem ter no maximo valor 10 e no minimo valor -10");
+		}
+	}
+
+	grau = grau * 3.141582 / 180;
+	seno = sin(grau);
+	cosseno = cos(grau);
+
+	if (sentido == 0) {
+		R[0][0] = cosseno; R[0][1] = -seno;    R[0][2] = 0;
+		R[1][0] = seno;    R[1][1] = cosseno;  R[1][2] = 0;
+		R[2][0] = 0;       R[2][1] = 0;        R[2][2] = 1;
+	}
+	else if (sentido == 1) {
+		R[0][0] = cosseno; R[0][1] = seno;    R[0][2] = 0;
+		R[1][0] = -seno;   R[1][1] = cosseno; R[1][2] = 0;
+		R[2][0] = 0;       R[2][1] = 0;       R[2][2] = 1;
+	}
+	Rotacao(A, R);
+
+	glColor3f(0, 1.0, 0);
+	glBegin(GL_TRIANGLES);
+	glVertex2f(C[0][0], C[0][1]);
+	glVertex2f(C[1][0], C[1][1]);
+	glVertex2f(C[2][0], C[2][1]);
+	glEnd();
+}
+
+// ESCALA
+void Objeto04() {
+	float ex, ey;
+	bool controlador = false;
+
+	while (controlador == false)
+	{
+		printf("\n Informe ex = ");
+		scanf_s("%f", &ex);
+		printf("\n Informe ey = ");
+		scanf_s("%f", &ey);
+
+		controlador = Validar_Valores(ex, ey);
+		if (!controlador) {
+			printf("\n Valores invalidos, x e y devem ter no maximo valor 10 e no minimo valor -10");
+		}
+	}
+
+	Ti[0][0] =  1; T[0][1] =  0; T[0][2] = 0;
+	Ti[1][0] =  0; T[1][1] =  1; T[1][2] = 0;
+	Ti[2][0] = -1; T[2][1] = -1; T[2][2] = 1;
+
+	E[0][0] = ex; E[0][1] = 0;  E[0][2] = 0;
+	E[1][0] = 0;  E[1][1] = ey; E[1][2] = 0;
+	E[2][0] = 0;  E[2][1] = 0;  E[2][2] = 1;
+
+	/*
+		2  0  0
+		0  2  0
+	   -2 -2  1
+	*/
+
+	T[0][0] = 1; T[0][1] = 0; T[0][2] = 0;
+	T[1][0] = 0; T[1][1] = 1; T[1][2] = 0;
+	T[2][0] = 1; T[2][1] = 1; T[2][2] = 1;
+
+	/*
+		2  0  0
+		0  2  0
+	   -1 -1  1
+	*/
+
+	Escala(A, T, Ti, E);
+
+	glColor3f(1.0, 1.0, 0.0);
+	glBegin(GL_TRIANGLES);
+	glVertex2f(C[0][0], C[0][1]);
+	glVertex2f(C[1][0], C[1][1]);
+	glVertex2f(C[2][0], C[2][1]);
+	glEnd();
+
+}
+
+void Display() {
+	glClearColor(1.0, 1.0, 1.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	eixo();
+
+	switch (k) {
+	case 1:
+		Objeto01();
+		break;
+	case 2:
+		Objeto02();
+		break;
+	case 3:
+		Objeto03();
+		break;
+	case 4:
+		Objeto04();
+		break;
+	}
+
+
+	glFlush();
+}
+
+
+void teclado(unsigned char key, int x, int y) {
+	switch (key) {
+	case 'T':
+	case 't':
+		k = 2;
+		Display();
+		break;
+	case 'R':
+	case 'r':
+		k = 3;
+		Display();
+		break;
+	case 'E':
+	case 'e':
+		k = 4;
+		Display();
+		break;
+	default:
+		k = 1;
+		Display();
+		break;
+	}
+}
+
+void main(int argc, char **argv) {
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA | GLUT_DEPTH);
+
+	glutInitWindowSize(500, 500);
+
+	glutInitWindowPosition(650, 000);
+
+	glutCreateWindow("Operações Elementares");
+
+	glutKeyboardFunc(teclado);
+
+	gluOrtho2D(-10, 10, -10, 10);
+
+	glutDisplayFunc(Display);
+	glutMainLoop();
+}
